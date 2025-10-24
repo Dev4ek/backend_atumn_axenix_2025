@@ -18,13 +18,23 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.now() + timedelta(minutes=settings.auth.access_token_expire_minutes)
+    expire = datetime.now() + timedelta(
+        minutes=settings.auth.access_token_expire_minutes
+    )
     to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.auth.secret_key.get_secret_value(), algorithm=settings.auth.algorithm)
+    return jwt.encode(
+        to_encode,
+        settings.auth.secret_key.get_secret_value(),
+        algorithm=settings.auth.algorithm,
+    )
 
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now() + timedelta(days=settings.auth.refresh_token_expire_days)
     to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, settings.auth.secret_key.get_secret_value(), algorithm=settings.auth.algorithm)
+    return jwt.encode(
+        to_encode,
+        settings.auth.secret_key.get_secret_value(),
+        algorithm=settings.auth.algorithm,
+    )

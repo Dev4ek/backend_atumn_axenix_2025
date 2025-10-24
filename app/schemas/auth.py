@@ -9,4 +9,3 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     nickname: str
     password: str
-

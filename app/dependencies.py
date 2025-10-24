@@ -4,8 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from app.config import settings
 from app.models.users import User
-from jose import JWTError, jwt
-from app.config import settings
+from jose import jwt
 
 
 engine = create_async_engine(settings.postgres.build_dsn())
@@ -19,7 +18,7 @@ async def get_db() -> AsyncIterable[AsyncSession]:
 
 async def get_current_user_from_token(
     access_token: str | None = Cookie(None, include_in_schema=False),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     if not access_token:
         raise HTTPException(
@@ -38,7 +37,6 @@ async def get_current_user_from_token(
         if user_id is None:
             raise HTTPException("Invalid token1")
 
-
         # 3. Получение пользователя из БД
         stmt = select(User).where(User.id == int(user_id))
         result = await db.execute(stmt)
@@ -49,12 +47,12 @@ async def get_current_user_from_token(
 
         return user
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
-    
+
 
 # Type Alias для аннотаций
 CurrentUser = Annotated[User, Depends(get_current_user_from_token)]

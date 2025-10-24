@@ -74,6 +74,7 @@ class AuthConfig(BaseSettings, env_prefix="AUTH_"):
         default=None, description="domain политика для cookies"
     )
 
+
 class Config(BaseSettings):
     """
     Основной конфиг который будем инициализировать
