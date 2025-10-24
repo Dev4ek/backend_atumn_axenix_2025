@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db
 from app.models.users import User
 from app.schemas.user import UserCreate, UserResponse
+from app.utils.auth import hash_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -14,11 +15,24 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 
 @router.post("", response_model=UserResponse)
 async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
-    user = User(nickname=data.nickname, password_hash=data.password)
+    result = await db.execute(select(User).where(User.nickname == data.nickname))
+    user = result.scalar_one_or_none()
+    
+    if user:
+        raise HTTPException(status_code=409, detail="User already exists")
+    
+    hashed_password = hash_password(data.password)
+    user = User(nickname=data.nickname, password_hash=hashed_password)
     db.add(user)
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_me_user(current_user: CurrentUser, db: AsyncSession = Depends(get_db)):
+    return current_user
+
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):

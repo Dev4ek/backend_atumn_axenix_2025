@@ -6,10 +6,13 @@ services:
       - "8088:8088"
     volumes:
       - ./app:/app/app
+      - ssl-certs:/app/certs
     environment:
       - APPLICATION_DEBUG=True
+      - USE_SSL=true
     command: >
-      sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload"
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload --ssl-keyfile=/app/certs/key.pem --ssl-certfile=/app/certs/cert.pem"
     stdin_open: true
     tty: true
 
@@ -18,3 +21,6 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
+      
+volumes:
+  ssl-certs:

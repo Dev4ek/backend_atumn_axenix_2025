@@ -46,43 +46,40 @@ class PostgresConfig(BaseSettings, env_prefix="POSTGRES_"):
         ).render_as_string(hide_password=False)
 
 
-# class AuthConfig(BaseSettings, env_prefix="AUTH_"):
-#     """Конфигурация аутентификации"""
+class AuthConfig(BaseSettings, env_prefix="AUTH_"):
+    """Конфигурация аутентификации"""
 
-#     secret_key: SecretStr = Field(
-#         ...,
-#         description="Секретный ключ для JWT",
-#         example="your-256-bit-secret-key-change-in-production",
-#     )
-#     algorithm: str = Field(default="HS256", description="Алгоритм шифрования")
-#     access_token_expire_minutes: int = Field(
-#         default=30, description="Время жизни access токена в минутах"
-#     )
-#     refresh_token_expire_days: int = Field(
-#         default=7, description="Время жизни refresh токена в днях"
-#     )
-#     x_access_token: str = Field(
-#         ...,
-#         description="Можно делать запросы на защищенные эндпоинты с токеном в заголовке X-Access-Token",
-#     )
-#     cookie_secure: bool = Field(
-        default=False,  # False для разработки, True для продакшена
+    secret_key: SecretStr = Field(
+        ...,
+        description="Секретный ключ для JWT",
+        example="your-256-bit-secret-key-change-in-production",
+    )
+    algorithm: str = Field(default="HS256", description="Алгоритм шифрования")
+    access_token_expire_minutes: int = Field(
+        default=30, description="Время жизни access токена в минутах"
+    )
+    refresh_token_expire_days: int = Field(
+        default=7, description="Время жизни refresh токена в днях"
+    )
+
+    cookie_secure: bool = Field(
+        default=True,  # False для разработки, True для продакшена
         description="Использовать secure cookies (только HTTPS)",
-    # )
-    # cookie_httponly: bool = Field(default=True, description="HttpOnly флаг для cookies")
-    # cookie_samesite: str = Field(
-    #     default="lax", description="SameSite политика для cookies"
-    # )
-    # cookie_domain: str | None = Field(
-    #     default=None, description="domain политика для cookies"
-    # )
+    )
+    cookie_httponly: bool = Field(default=True, description="HttpOnly флаг для cookies")
+    cookie_samesite: str = Field(
+        default="none", description="SameSite политика для cookies"
+    )
+    cookie_domain: str | None = Field(
+        default=None, description="domain политика для cookies"
+    )
 
 class Config(BaseSettings):
     """
     Основной конфиг который будем инициализировать
     """
 
-    # auth: AuthConfig = Field(default_factory=AuthConfig)
+    auth: AuthConfig = Field(default_factory=AuthConfig)
     postgres: PostgresConfig = Field(default_factory=PostgresConfig)
 
 
