@@ -1,0 +1,19 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: 
+      - dev
+
+jobs:
+  deploy:
+    timeout-minutes: 10
+    runs-on: 
+      - self-hosted
+      - dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy
+        run: make prod
