@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import CurrentUser, get_db
 from app.models.users import User
 from app.schemas.user import UserCreate, UserResponse
-from app.utils.auth import hash_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -46,15 +45,3 @@ async def update_user(
     await db.commit()
     await db.refresh(user)
     return user
-
-
-@router.delete("/{user_id}")
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    await db.delete(user)
-    await db.commit()
-    return {"ok": True}

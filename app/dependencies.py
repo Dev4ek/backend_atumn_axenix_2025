@@ -35,7 +35,7 @@ async def get_current_user_from_token(
 
         user_id = payload.get("sub")
         if user_id is None:
-            raise HTTPException("Invalid token1")
+            raise HTTPException("Invalid token")
 
         # 3. Получение пользователя из БД
         stmt = select(User).where(User.id == int(user_id))
@@ -43,7 +43,7 @@ async def get_current_user_from_token(
         user = result.scalar_one_or_none()
 
         if not user:
-            raise HTTPException("Invalid token2")
+            raise HTTPException("Invalid token")
 
         return user
 
@@ -54,5 +54,16 @@ async def get_current_user_from_token(
         )
 
 
+async def get_current_user_optional(
+    access_token: str | None = Cookie(None, include_in_schema=False),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    try:
+        return await get_current_user_from_token(access_token=access_token, db=db)
+    except Exception:
+        return None
+
+
 # Type Alias для аннотаций
 CurrentUser = Annotated[User, Depends(get_current_user_from_token)]
+CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]

@@ -1,6 +1,6 @@
 from .base import Base
 from .users import User
-from .meet_users import MeetUsers
-from .meet import Meet
+from .room_users import RoomUsers
+from .room import Room
 
-__all__ = ["Base", "User", "Meet", "MeetUsers"]
+__all__ = ["Base", "User", "Room", "RoomUsers"]
