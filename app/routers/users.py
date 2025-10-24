@@ -15,7 +15,6 @@ async def get_users(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-
 @router.get("/me", response_model=UserResponse)
 async def get_me_user(current_user: CurrentUser, db: AsyncSession = Depends(get_db)):
     return current_user
