@@ -148,7 +148,6 @@ async def leave_room(request: Request, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"ok": True}
 
-
 @router.delete("/{room_id}", description="Удаление комнаты (только создатель)")
 async def delete_room(
     room_id: int, current_user: CurrentUser, db: AsyncSession = Depends(get_db)
