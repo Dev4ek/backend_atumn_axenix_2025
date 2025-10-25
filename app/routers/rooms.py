@@ -120,6 +120,7 @@ async def join_room(
     # Генерируем токен для пользователя
     token_room = secrets.token_urlsafe(8)
 
+
     room_user = RoomUsers(user_nickname=nickname, room_id=room.id, token=token_room)
 
     db.add(room_user)
