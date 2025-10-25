@@ -14,6 +14,7 @@ async def room_websocket(
     token_room: Optional[str] = Cookie(None)
 ):
     await websocket.accept()
+    await websocket.send_text("Успешно")
     
     if not token_room:
         await websocket.close(code=1008, reason="No token")
