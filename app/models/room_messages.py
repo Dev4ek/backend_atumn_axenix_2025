@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
-
-from sqlalchemy import Integer, String, ForeignKey, TIMESTAMP
+from sqlalchemy import Integer, String, ForeignKey, TIMESTAMP, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -23,7 +22,20 @@ class RoomMessages(Base):
         ForeignKey("rooms.id"),
         comment="Айди комнаты",
     )
-    text: Mapped[str] = mapped_column(String(1000), comment="Текст сообщения")
+    text: Mapped[str] = mapped_column(Text, comment="Текст сообщения")
+    original_text: Mapped[str] = mapped_column(Text, comment="Оригинальный текст (до фильтрации)")
+    
+    message_type: Mapped[str] = mapped_column(
+        String(50), default="text", comment="Тип сообщения: text, system, notification"
+    )
+    
+    is_filtered: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="Было ли сообщение отфильтровано"
+    )
+    
+    filtered_reason: Mapped[str] = mapped_column(
+        String(500), nullable=True, comment="Причина фильтрации"
+    )
     
     send_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -32,5 +44,5 @@ class RoomMessages(Base):
     )
 
     room: Mapped["Room"] = relationship(
-        "Room", back_populates="room_chats", lazy="selectin"
+        "Room", back_populates="room_messages", lazy="selectin"
     )
