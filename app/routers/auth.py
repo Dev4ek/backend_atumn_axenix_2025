@@ -84,8 +84,18 @@ async def register(
 @router.post("/logout")
 async def logout(response: Response):
     """Выход - удаление cookies"""
-    response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token")
+    response.delete_cookie(key="access_token",
+        httponly=settings.auth.cookie_httponly,
+        secure=settings.auth.cookie_secure,
+        samesite=settings.auth.cookie_samesite,
+        domain=settings.auth.cookie_domain
+    )
+    response.delete_cookie(key="refresh_token",
+        httponly=settings.auth.cookie_httponly,
+        secure=settings.auth.cookie_secure,
+        samesite=settings.auth.cookie_samesite,
+        domain=settings.auth.cookie_domain
+    )
     return {"message": "Logout successful"}
 
 
