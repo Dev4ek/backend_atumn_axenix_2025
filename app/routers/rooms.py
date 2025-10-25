@@ -40,6 +40,7 @@ async def create_room(
     room_code = f"{room_code[:3]}-{room_code[3:6]}-{room_code[6:9]}".lower()
 
     room = Room(
+        name=data.name,
         code=room_code, 
         user_id=current_user.id, 
         schedule=data.schedule,
