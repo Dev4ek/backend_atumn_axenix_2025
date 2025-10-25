@@ -13,6 +13,7 @@ class RoomCreate(BaseModel):
 class RoomJoinResponse(BaseModel):
     """Схема ответа на присоединение в комнату"""
     
+    id: int
     code: str = Field(..., description="Уникальный код комнаты")
     token: str = Field(..., description="Уникальный токен для пользователя")
     

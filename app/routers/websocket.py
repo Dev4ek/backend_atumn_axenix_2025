@@ -1,10 +1,3 @@
-# app/routers/websocket.py
-"""
-WebSocket роутер с поддержкой:
-- Аутентификации через токен
-- WebRTC signaling (offer/answer/ICE)
-- Трансляции статуса медиа (mic/camera)
-"""
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from typing import Dict, Optional
 import json

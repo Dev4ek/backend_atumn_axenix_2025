@@ -137,6 +137,7 @@ async def join_room(
 
 
     return RoomJoinResponse(
+        id=room.id,
         code=room.code,
         token=token_room
     )
