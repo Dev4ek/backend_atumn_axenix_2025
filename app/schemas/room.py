@@ -9,7 +9,9 @@ class RoomCreate(BaseModel):
     schedule: datetime | None = Field(
         None, description="На какую дату запланирована встреча в комнате"
     )
-
+    banned_words: list[str]| None = Field(
+        None, description="список запрещеныйх слов"
+    )
 
 class RoomJoinResponse(BaseModel):
     """Схема ответа на присоединение в комнату"""

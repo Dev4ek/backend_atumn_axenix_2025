@@ -43,7 +43,7 @@ async def create_room(
         code=room_code, 
         user_id=current_user.id, 
         schedule=data.schedule,
-        banned_words='[]'  # Пустой список запрещенных слов по умолчанию
+        banned_words=data.banned_words  # Пустой список запрещенных слов по умолчанию
     )
 
     db.add(room)
