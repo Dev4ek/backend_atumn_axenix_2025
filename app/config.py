@@ -63,12 +63,12 @@ class AuthConfig(BaseSettings, env_prefix="AUTH_"):
     )
 
     cookie_secure: bool = Field(
-        default=False,  # False для разработки, True для продакшена
+        default=True,  # False для разработки, True для продакшена
         description="Использовать secure cookies (только HTTPS)",
     )
     cookie_httponly: bool = Field(default=True, description="HttpOnly флаг для cookies")
     cookie_samesite: str = Field(
-        default="lax", description="SameSite политика для cookies"
+        default="none", description="SameSite политика для cookies"
     )
     cookie_domain: str | None = Field(
         default=None, description="domain политика для cookies"
