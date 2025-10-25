@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import TIMESTAMP, Integer, String, Boolean, ForeignKey, func
+from sqlalchemy import TIMESTAMP, Integer, String, Boolean, ForeignKey, func, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.room_users import RoomUsers
@@ -8,7 +8,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from app.models.users import User
-    from app.models.chats import RoomMessages
+    from app.models.room_messages import RoomMessages
 
 class Room(Base):
     __tablename__ = "rooms"
@@ -31,6 +31,12 @@ class Room(Base):
         server_default=func.now(),
         comment="Когда комната была создана",
     )
+    # Исправлено: правильный тип для Text поля
+    banned_words: Mapped[str] = mapped_column(
+        Text,
+        default='[]',
+        comment="JSON список запрещенных слов для фильтрации"
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="rooms", lazy="selectin")
     room_users: Mapped[list["RoomUsers"]] = relationship(
@@ -39,4 +45,8 @@ class Room(Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
-    room_messages: Mapped[list["RoomMessages"]] = relationship("RoomMessages", back_populates="room")
+    room_messages: Mapped[list["RoomMessages"]] = relationship(
+        "RoomMessages", 
+        back_populates="room",
+        lazy="selectin"
+    )
