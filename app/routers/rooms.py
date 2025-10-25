@@ -129,7 +129,7 @@ async def join_room(
     response.set_cookie(
         key="token_room",
         value=token_room,
-        httponly=settings.auth.cookie_httponly,
+        httponly=False,
         secure=settings.auth.cookie_secure,
         samesite=settings.auth.cookie_samesite,
         domain=settings.auth.cookie_domain,
