@@ -1,4 +1,3 @@
-# app/routers/websocket.py
 import asyncio
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from typing import Dict
@@ -14,7 +13,6 @@ active_connections: Dict[str, Dict[str, WebSocket]] = {}
 @router.websocket("/ws/room/{room_code}")
 async def room_websocket(websocket: WebSocket, room_code: str, token_room: str = Query(..., description="Токен подключения к комнате")):
     await websocket.accept()
-    
     
     # Добавляем в список подключений
     if room_code not in active_connections:

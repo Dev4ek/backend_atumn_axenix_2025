@@ -135,6 +135,7 @@ async def join_room(
         domain=settings.auth.cookie_domain,
     )
 
+
     return RoomJoinResponse(
         code=room.code,
         token=token_room
