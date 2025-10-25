@@ -1,4 +1,5 @@
 # app/routers/websocket.py
+import asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict
 import json
@@ -28,6 +29,8 @@ async def room_websocket(websocket: WebSocket, room_code: str):
             "type": "active_peers",
             "peers": active_users
         })
+        
+        await asyncio.sleep(0.1)
         
         # Уведомить всех о новом пользователе
         await broadcast(room_code, {
@@ -83,3 +86,4 @@ async def broadcast(room_code: str, message: dict, exclude: str = None):
     for user_id in disconnected:
         if user_id in active_connections[room_code]:
             del active_connections[room_code][user_id]
+ 
