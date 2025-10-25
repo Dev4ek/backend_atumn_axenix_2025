@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.dependencies import CurrentUser, get_db, CurrentUserOptional
 from app.models.room import Room
 from app.models.room_users import RoomUsers
-from app.schemas.room import RoomCreate, RoomResponse, RoomJoin, RoomWithUsersResponse
+from app.schemas.room import RoomCreate, RoomJoinResponse, RoomResponse, RoomJoin, RoomWithUsersResponse
 import shortuuid
 from app.config import settings
 
@@ -77,7 +77,7 @@ async def get_room_by_code(
 
 @router.post(
     "/join",
-    response_model=RoomResponse,
+    response_model=RoomJoinResponse,
     description="Присоединение к комнате по ссылке",
 )
 async def join_room(
@@ -135,7 +135,10 @@ async def join_room(
         domain=settings.auth.cookie_domain,
     )
 
-    return room
+    return RoomJoinResponse(
+        code=room.code,
+        token=token_room
+    )
 
 
 @router.delete("/leave", description="Покинуть комнату")

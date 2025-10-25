@@ -10,15 +10,22 @@ class RoomCreate(BaseModel):
     )
 
 
-class RoomResponse(BaseModel):
-    """Схема ответа с информацией о комнате"""
-
-    id: int
+class RoomJoinResponse(BaseModel):
+    """Схема ответа на присоединение в комнату"""
+    
     code: str = Field(..., description="Уникальный код комнаты")
-    user_id: int = Field(..., description="ID создателя комнаты")
-    is_active: bool = Field(..., description="Активна ли комната")
-    schedule: datetime | None = Field(None, description="Дата запланированной встречи")
-    created_at: datetime = Field(..., description="Дата создания комнаты")
+    token: str = Field(..., description="Уникальный токен для пользователя")
+    
+
+# class RoomResponse(BaseModel):
+#     """Схема ответа с информацией о комнате"""
+
+#     id: int
+#     code: str = Field(..., description="Уникальный код комнаты")
+#     user_id: int = Field(..., description="ID создателя комнаты")
+#     is_active: bool = Field(..., description="Активна ли комната")
+#     schedule: datetime | None = Field(None, description="Дата запланированной встречи")
+#     created_at: datetime = Field(..., description="Дата создания комнаты")
 
 
 class RoomUser(BaseModel):
