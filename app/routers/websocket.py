@@ -1,42 +1,39 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Cookie
-from typing import Dict, Optional
+# app/routers/websocket.py
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import Dict
 import json
+import uuid
 
 router = APIRouter()
 
-# {room_code: {token: websocket}}
+# {room_code: {user_id: websocket}}
 active_connections: Dict[str, Dict[str, WebSocket]] = {}
 
+
 @router.websocket("/ws/room/{room_code}")
-async def room_websocket(
-    websocket: WebSocket, 
-    room_code: str,
-    token_room: Optional[str] = Cookie(None)
-):
+async def room_websocket(websocket: WebSocket, room_code: str):
     await websocket.accept()
-    await websocket.send_text("Успешно")
     
-    if not token_room:
-        await websocket.close(code=1008, reason="No token")
-        return
+    user_id = str(uuid.uuid4())
     
-    # Добавиляем в список подключений
+    # Добавляем в список подключений
     if room_code not in active_connections:
         active_connections[room_code] = {}
-    active_connections[room_code][token_room] = websocket
+    active_connections[room_code][user_id] = websocket
     
     try:
-        active_tokens = [t for t in active_connections[room_code].keys() if t != token_room]
+        # Отправить список активных пользователей
+        active_users = [uid for uid in active_connections[room_code].keys() if uid != user_id]
         await websocket.send_json({
             "type": "active_peers",
-            "peers": active_tokens 
+            "peers": active_users
         })
         
-        # Уведомить всех о новом peer
+        # Уведомить всех о новом пользователе
         await broadcast(room_code, {
-            "type": "user_joined",
-            "user_token": token_room
-        }, exclude=token_room)
+            "type": "peer_joined",
+            "peer_token": user_id
+        }, exclude=user_id)
         
         while True:
             data = await websocket.receive_text()
@@ -44,39 +41,45 @@ async def room_websocket(
             
             # WebRTC signaling
             if message.get("type") in ["offer", "answer", "ice_candidate"]:
-                target_token = message.get("target")
-                if target_token and target_token in active_connections.get(room_code, {}):
-                    target_ws = active_connections[room_code][target_token]
-                    message["from"] = token_room
+                target_id = message.get("target")
+                if target_id and target_id in active_connections.get(room_code, {}):
+                    target_ws = active_connections[room_code][target_id]
+                    message["from"] = user_id
                     await target_ws.send_json(message)
                     
     except WebSocketDisconnect:
+        
         # Удалить соединение
-        if room_code in active_connections and token_room in active_connections[room_code]:
-            del active_connections[room_code][token_room]
+        if room_code in active_connections and user_id in active_connections[room_code]:
+            del active_connections[room_code][user_id]
             
         # Уведомить всех
         await broadcast(room_code, {
-            "type": "user_left",
-            "user_token": token_room
+            "type": "peer_left",
+            "peer_token": user_id
         })
         
+        # Удалить комнату если пустая
         if room_code in active_connections and len(active_connections[room_code]) == 0:
             del active_connections[room_code]
+            print(f"🗑️ Удалена пустая комната: {room_code}")
+
 
 async def broadcast(room_code: str, message: dict, exclude: str = None):
+    """Отправить сообщение всем в комнате"""
     if room_code not in active_connections:
         return
     
     disconnected = []
-    for token, ws in active_connections[room_code].items():
-        if token == exclude:
-            continue   
+    for user_id, ws in active_connections[room_code].items():
+        if user_id == exclude:
+            continue
         try:
             await ws.send_json(message)
-        except:
-            disconnected.append(token)
+        except Exception as e:
+            disconnected.append(user_id)
     
-    for token in disconnected:
-        if token in active_connections[room_code]:
-            del active_connections[room_code][token]
+    # Удалить отключенных
+    for user_id in disconnected:
+        if user_id in active_connections[room_code]:
+            del active_connections[room_code][user_id]
