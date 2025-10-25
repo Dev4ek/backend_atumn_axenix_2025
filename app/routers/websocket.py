@@ -1,6 +1,6 @@
 # app/routers/websocket.py
 import asyncio
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from typing import Dict
 import json
 import uuid
@@ -12,31 +12,28 @@ active_connections: Dict[str, Dict[str, WebSocket]] = {}
 
 
 @router.websocket("/ws/room/{room_code}")
-async def room_websocket(websocket: WebSocket, room_code: str):
+async def room_websocket(websocket: WebSocket, room_code: str, token_room: str = Query(..., description="Токен подключения к комнате")):
     await websocket.accept()
     
-    user_id = str(uuid.uuid4())
     
     # Добавляем в список подключений
     if room_code not in active_connections:
         active_connections[room_code] = {}
-    active_connections[room_code][user_id] = websocket
+    active_connections[room_code][token_room] = websocket
     
     try:
         # Отправить список активных пользователей
-        active_users = [uid for uid in active_connections[room_code].keys() if uid != user_id]
+        active_users = [t for t in active_connections[room_code].keys() if t != token_room]
         await websocket.send_json({
             "type": "active_peers",
             "peers": active_users
         })
         
-        await asyncio.sleep(0.1)
-        
         # Уведомить всех о новом пользователе
         await broadcast(room_code, {
             "type": "peer_joined",
-            "peer_token": user_id
-        }, exclude=user_id)
+            "peer_token": token_room
+        }, exclude=token_room)
         
         while True:
             data = await websocket.receive_text()
@@ -47,19 +44,19 @@ async def room_websocket(websocket: WebSocket, room_code: str):
                 target_id = message.get("target")
                 if target_id and target_id in active_connections.get(room_code, {}):
                     target_ws = active_connections[room_code][target_id]
-                    message["from"] = user_id
+                    message["from"] = token_room
                     await target_ws.send_json(message)
                     
     except WebSocketDisconnect:
         
         # Удалить соединение
-        if room_code in active_connections and user_id in active_connections[room_code]:
-            del active_connections[room_code][user_id]
+        if room_code in active_connections and token_room in active_connections[room_code]:
+            del active_connections[room_code][token_room]
             
         # Уведомить всех
         await broadcast(room_code, {
             "type": "peer_left",
-            "peer_token": user_id
+            "peer_token": token_room
         })
         
         # Удалить комнату если пустая
