@@ -51,7 +51,7 @@ async def get_room_by_code(
     # Проверяем что пользователь уже в комнате
     result = await db.execute(
         select(RoomUsers)
-        .join(Room, Room.id == RoomUsers.id)
+        .join(Room, Room.id == RoomUsers.room_id)
         .where(
             RoomUsers.token == request.cookies.get("token_room"),
             Room.code == room_code
@@ -90,7 +90,7 @@ async def join_room(
     # Проверяем что пользователь уже в комнате
     result = await db.execute(
         select(RoomUsers)
-        .join(Room, Room.id == RoomUsers.id)
+        .join(Room, Room.id == RoomUsers.room_id)
         .where(
             RoomUsers.token == request.cookies.get("token_room"),
             Room.code == data.code
@@ -122,6 +122,10 @@ async def join_room(
 
     room_user = RoomUsers(user_nickname=nickname, room_id=room.id, token=token_room)
 
+    db.add(room_user)
+    await db.commit()
+    
+    
     response.set_cookie(
         key="token_room",
         value=token_room,
@@ -131,8 +135,6 @@ async def join_room(
         domain=settings.auth.cookie_domain,
     )
 
-    db.add(room_user)
-    await db.commit()
     return room
 
 
