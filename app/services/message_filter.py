@@ -74,7 +74,7 @@ class AdvancedMessageFilter(MessageFilter):
         violations = []
         
         # Объединяем базовые и кастомные запрещенные слова
-        all_banned_words = self.base_bad_words + (custom_banned_words or [])
+        all_banned_words = custom_banned_words or []
         
         # Создаем одно большое регулярное выражение для всех запрещенных слов
         if all_banned_words:
@@ -118,11 +118,11 @@ class AdvancedMessageFilter(MessageFilter):
 # Создаем экземпляр фильтра
 message_filter = AdvancedMessageFilter()
 
-# # Тестирование
+# Тестирование
 # if __name__ == "__main__":
 #     test_cases = [
-#         "тылох настоящий!",
-#         "Этот человек - лох",
+#         "тылох пидор настоящий!",
+#         "Этот чмо человек - лох",
 #         "Привет, как дела?",
 #         "лохотрон и прелох",
 #         "Слово лох в тексте",
@@ -130,7 +130,7 @@ message_filter = AdvancedMessageFilter()
 #     ]
     
 #     for test in test_cases:
-#         result = message_filter.filter_message(test, ["лох"])
+#         result = message_filter.filter_message(test, ["пидор","чмо"])
 #         print(f"Оригинал: {test}")
 #         print(f"Фильтр:   {result['filtered_text']}")
 #         print(f"Нарушения: {result['violations']}")
