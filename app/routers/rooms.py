@@ -89,7 +89,12 @@ async def join_room(
 ):
     # Проверяем что пользователь уже в комнате
     result = await db.execute(
-        select(RoomUsers).where(RoomUsers.token == request.cookies.get("token_room"))
+        select(RoomUsers)
+        .join(Room, Room.id == RoomUsers.id)
+        .where(
+            RoomUsers.token == request.cookies.get("token_room"),
+            Room.code == data.code
+        )
     )
     room_user_exists = result.scalar_one_or_none()
 
