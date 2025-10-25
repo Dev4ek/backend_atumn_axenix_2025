@@ -7,7 +7,7 @@ from datetime import datetime
 class MessageFilter:
     def __init__(self):
         self.base_bad_words = [
-            "мат", "оскорбление", "spam"  # базовый список
+            "мат", "оскорбление", "spam", "лох"  # базовый список
         ]
         
         self.spam_patterns = [
@@ -26,12 +26,25 @@ class MessageFilter:
         # Объединяем базовые и кастомные запрещенные слова
         all_banned_words = self.base_bad_words + (custom_banned_words or [])
         
-        # Проверка запрещенных слов
+        # Проверка запрещенных слов (включая части слов)
         for word in all_banned_words:
             if word.strip():  # Проверяем только непустые слова
+                # Ищем слово в любом месте текста, даже как часть другого слова
                 pattern = re.compile(re.escape(word), re.IGNORECASE)
-                if pattern.search(filtered_text):
-                    filtered_text = pattern.sub('***', filtered_text)
+                matches = pattern.finditer(filtered_text)
+                
+                found_matches = False
+                temp_text = filtered_text
+                
+                for match in matches:
+                    found_matches = True
+                    # Заменяем найденное вхождение на звездочки
+                    start, end = match.span()
+                    replacement = '*' * (end - start)
+                    temp_text = temp_text[:start] + replacement + temp_text[end:]
+                
+                if found_matches:
+                    filtered_text = temp_text
                     violations.append(f"Запрещенное слово: '{word}'")
         
         # Проверка спам-паттернов
@@ -53,4 +66,72 @@ class MessageFilter:
         }
 
 
-message_filter = MessageFilter()
+# Альтернативная версия с более эффективной заменой
+class AdvancedMessageFilter(MessageFilter):
+    def filter_message(self, text: str, custom_banned_words: List[str] = None) -> Dict:
+        """Улучшенная фильтрация с использованием одного регулярного выражения"""
+        original_text = text
+        violations = []
+        
+        # Объединяем базовые и кастомные запрещенные слова
+        all_banned_words = self.base_bad_words + (custom_banned_words or [])
+        
+        # Создаем одно большое регулярное выражение для всех запрещенных слов
+        if all_banned_words:
+            # Экранируем и объединяем слова через |
+            pattern_words = [re.escape(word) for word in all_banned_words if word.strip()]
+            if pattern_words:
+                # Ищем любое из запрещенных слов в любом месте
+                combined_pattern = re.compile('|'.join(pattern_words), re.IGNORECASE)
+                
+                def replace_match(match):
+                    matched_text = match.group()
+                    return '*' * len(matched_text)
+                
+                filtered_text, count = combined_pattern.subn(replace_match, text)
+                
+                if count > 0:
+                    violations.append(f"Найдено {count} запрещенных слов")
+        
+        else:
+            filtered_text = text
+        
+        # Проверка спам-паттернов
+        for pattern, description in self.spam_patterns:
+            if re.search(pattern, filtered_text, re.IGNORECASE):
+                violations.append(description)
+        
+        # Проверка длины
+        if len(filtered_text) > 2000:
+            violations.append("Сообщение слишком длинное")
+            filtered_text = filtered_text[:2000]
+        
+        return {
+            "filtered_text": filtered_text,
+            "violations": violations,
+            "is_clean": len(violations) == 0,
+            "original_text": original_text,
+            "filtered_reason": "; ".join(violations) if violations else None
+        }
+
+
+# Создаем экземпляр фильтра
+message_filter = AdvancedMessageFilter()
+
+# # Тестирование
+# if __name__ == "__main__":
+#     test_cases = [
+#         "тылох настоящий!",
+#         "Этот человек - лох",
+#         "Привет, как дела?",
+#         "лохотрон и прелох",
+#         "Слово лох в тексте",
+#         "ТЫЛОХПЕТУХ"
+#     ]
+    
+#     for test in test_cases:
+#         result = message_filter.filter_message(test, ["лох"])
+#         print(f"Оригинал: {test}")
+#         print(f"Фильтр:   {result['filtered_text']}")
+#         print(f"Нарушения: {result['violations']}")
+#         print("-" * 50)
