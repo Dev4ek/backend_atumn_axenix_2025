@@ -1,5 +1,5 @@
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,7 +11,6 @@ import shortuuid
 from app.config import settings
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
-
 
 @router.get(
     "", response_model=list[RoomResponse], description="Получение списка моих комнат"
