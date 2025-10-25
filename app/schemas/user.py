@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -10,5 +11,5 @@ class UserResponse(BaseModel):
 
 
 class UserCreate(BaseModel):
-    nickname: str
-    password: str
+    nickname: Optional[str]
+    password: Optional[str]
