@@ -6,6 +6,7 @@ from typing import List, Optional
 class RoomCreate(BaseModel):
     """Схема создания комнаты"""
 
+    name: str = Field(..., max_length=255, description="Имя комнаты")
     schedule: datetime | None = Field(
         None, description="На какую дату запланирована встреча в комнате"
     )
@@ -25,6 +26,7 @@ class RoomResponse(BaseModel):
     """Схема ответа с информацией о комнате"""
 
     id: int = Field(..., description="Уникальный идентификатор комнаты")
+    name: str = Field(..., description="Имя комнаты")
     code: str = Field(..., description="Уникальный код комнаты для присоединения")
     user_id: int = Field(..., description="ID пользователя создавшего комнату")
     is_active: bool = Field(..., description="Активна ли комната для присоединения")

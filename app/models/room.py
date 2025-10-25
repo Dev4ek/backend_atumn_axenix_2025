@@ -14,6 +14,7 @@ class Room(Base):
     __tablename__ = "rooms"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), comment="Имя комнаты")
     code: Mapped[str] = mapped_column(String(255), comment="Уникальный код комнаты")
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), comment="Айди пользователя кто создал комнату"

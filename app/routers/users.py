@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from pathlib import Path
+import uuid
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import CurrentUser, get_db
@@ -45,3 +47,44 @@ async def update_user(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.patch("/avatar", response_model=UserResponse)
+async def update_avatar(
+    current_user: CurrentUser,
+    avatar: UploadFile = File(..., description="Аватар"),
+    db: AsyncSession = Depends(get_db),
+):
+    STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
+    AVATARS_DIR = STATIC_DIR / "avatars"
+    
+    # Создаём папку, если её нет
+    AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+    
+    file_ext = Path(avatar.filename).suffix.lower()
+    
+    if file_ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+        raise HTTPException(status_code=400, detail="Недопустимый формат файла")
+    
+    # Генерируем уникальное имя файла
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = AVATARS_DIR / unique_filename
+    
+    # Удаляем старый аватар, если есть
+    if current_user.avatar:
+        old_avatar_path = AVATARS_DIR / Path(current_user.avatar).name
+        if old_avatar_path.exists():
+            old_avatar_path.unlink()
+    
+    # Сохраняем новый файл
+    contents = await avatar.read()
+    with open(file_path, "wb") as f:
+        f.write(contents)
+    
+    # Обновляем путь в БД
+    current_user.avatar = f"/static/avatars/{unique_filename}"
+    
+    await db.commit()
+    await db.refresh(current_user)
+    
+    return current_user

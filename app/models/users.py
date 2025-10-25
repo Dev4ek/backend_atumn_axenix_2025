@@ -19,6 +19,7 @@ class User(Base):
 
     nickname: Mapped[str] = mapped_column(String(255), unique=True)
 
+    avatar: Mapped[str] = mapped_column(String(1000), default="/static/axenix.jpg")
     password_hash: Mapped[str] = mapped_column(
         String(255),
     )

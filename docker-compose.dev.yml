@@ -8,6 +8,7 @@ services:
       - ./app:/app/app
     environment:
       - APPLICATION_DEBUG=True
+      - POSTGRES_HOST=postgres
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload"

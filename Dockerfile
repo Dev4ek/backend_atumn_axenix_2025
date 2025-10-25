@@ -15,11 +15,9 @@ RUN apt-get update && apt-get install -y \
 # Копируем requirements.txt
 COPY requirements.txt .
 
-# ✅ Сначала устанавливаем PySocks отдельно
-RUN pip install --no-cache-dir --upgrade pip
-
 # Устанавливаем остальные зависимости
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
 COPY . .
