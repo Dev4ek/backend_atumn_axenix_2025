@@ -7,7 +7,7 @@ router = APIRouter()
 # {room_code: {token: websocket}}
 active_connections: Dict[str, Dict[str, WebSocket]] = {}
 
-@router.websocket("/ws/{room_code}")
+@router.websocket("/ws/room/{room_code}")
 async def room_websocket(
     websocket: WebSocket, 
     room_code: str,
