@@ -1,5 +1,5 @@
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,7 +11,7 @@ import shortuuid
 from app.config import settings
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
-
+websockets: Dict[str, WebSocket] = {}
 
 @router.get(
     "", response_model=list[RoomResponse], description="Получение списка моих комнат"
@@ -178,3 +178,33 @@ async def delete_room(
     await db.delete(room)
     await db.commit()
     return {"ok": True}
+
+
+
+@router.websocket("/ws/{room_code}/{client_id}")
+async def websocket_endpoint(websocket: WebSocket,room_code:str, client_id: str):
+    """WebSocket endpoint для сигналинга"""
+    await websocket.accept()
+    websockets[client_id] = websocket
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            if data.get("event") == "answer":
+                # Обработка answer от клиента
+                await webrtc.handle_answer(
+                    client_id, 
+                    data["sdp"], 
+                    data["type"]
+                )
+            elif data.get("event") == "ice_candidate":
+                # Обработка ICE кандидата
+                await webrtc.add_ice_candidate(client_id, data["candidate"])
+                
+    except WebSocketDisconnect:
+        print(f"WebSocket disconnected for client {client_id}")
+    except Exception as e:
+        print(f"WebSocket error for client {client_id}: {e}")
+    finally:
+        await webrtc.remove_client(client_id)
