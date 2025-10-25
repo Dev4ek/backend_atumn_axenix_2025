@@ -331,17 +331,17 @@ async def create_message(
         raise HTTPException(status_code=403, detail="Room is closed")
 
     # Получаем запрещенные слова комнаты
-    banned_words = []
-    if room.banned_words:
-        try:
-            banned_words = json.loads(room.banned_words)
-        except:
-            banned_words = []
+    # banned_words = []
+    # if room.banned_words:
+    #     try:
+    #         banned_words = json.loads(room.banned_words)
+    #     except:
+    #         banned_words = []
 
     # Фильтруем сообщение
     filter_result = message_filter.filter_message(
         message_data.text, 
-        banned_words
+        room.banned_words
     )
 
     # Создаем сообщение
