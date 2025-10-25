@@ -8,7 +8,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from app.models.users import User
-
+    from app.models.chats import RoomChats
 
 class Room(Base):
     __tablename__ = "rooms"
@@ -39,3 +39,4 @@ class Room(Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
+    room_chats: Mapped[list["RoomChats"]] = relationship("RoomChats", back_populates="room")
