@@ -4,4 +4,4 @@ from .room_users import RoomUsers
 from .room import Room
 from .chats import RoomMessages
 
-__all__ = ["Base", "User", "Room", "RoomUsers", "RoomChats"]
+__all__ = ["Base", "User", "Room", "RoomUsers", "RoomMessages"]
