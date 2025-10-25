@@ -16,8 +16,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # ✅ Сначала устанавливаем PySocks отдельно
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir PySocks==1.7.1
+RUN pip install --no-cache-dir --upgrade pip
 
 # Устанавливаем остальные зависимости
 RUN pip install --no-cache-dir -r requirements.txt
