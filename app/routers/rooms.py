@@ -99,7 +99,7 @@ async def join_room(
     room_user_exists = result.scalar_one_or_none()
 
     if room_user_exists:
-        raise HTTPException(status_code=409, detail="You are already in a room")
+        await db.delete(room_user_exists)
 
     if current_user:
         nickname = current_user.nickname
