@@ -61,6 +61,7 @@ async def room_websocket(
     logger.info(f"[WS] 🔌 Подключение: {user_id} → комната '{room_code}'")
     
     peer: Optional[PeerConnection] = None
+    room: Optional[Room] = None
     
     try:
         # === ИНИЦИАЛИЗАЦИЯ ===
@@ -78,6 +79,8 @@ async def room_websocket(
                 websocket=websocket
             )
             room.peers[user_id] = peer
+            
+            logger.info(f"[WS] 👤 Добавлен peer {user_id}. Всего в комнате: {len(room.peers)}")
             
             # Получаем список других участников
             other_peers = [
@@ -99,11 +102,11 @@ async def room_websocket(
         })
         logger.info(f"[WS] 📋 Отправлено {len(other_peers)} активных участников → {user_id}")
         
-        # Небольшая задержка для инициализации на фронте
-        await asyncio.sleep(0.05)
+        # Даем время на обработку на фронте
+        await asyncio.sleep(0.1)
         
         # Уведомляем остальных о новом участнике
-        await broadcast_to_room(room_code, {
+        new_peer_info = {
             "type": "peer_joined",
             "peer": {
                 "id": user_id,
@@ -111,7 +114,10 @@ async def room_websocket(
                 "videoOn": peer.video_on,
                 "screenSharing": peer.screen_sharing
             }
-        }, exclude=user_id)
+        }
+        
+        logger.info(f"[WS] 📣 Уведомляем комнату о новом участнике: {user_id}")
+        await broadcast_to_room(room_code, new_peer_info, exclude=user_id)
         
         logger.info(f"[WS] ✅ Инициализация завершена для {user_id}. Всего участников: {len(room.peers)}")
         
@@ -168,8 +174,9 @@ async def room_websocket(
                 # Проверяем живо ли соединение
                 try:
                     await websocket.send_json({"type": "ping"})
-                except Exception:
-                    logger.warning(f"[WS] ⏱️ Timeout для {user_id}, соединение мертво")
+                    logger.debug(f"[WS] 🏓 Ping отправлен → {user_id}")
+                except Exception as e:
+                    logger.warning(f"[WS] ⏱️ Timeout для {user_id}, соединение мертво: {e}")
                     break
     
     except WebSocketDisconnect:
@@ -180,6 +187,7 @@ async def room_websocket(
     
     finally:
         # === CLEANUP ===
+        logger.info(f"[WS] 🧹 Начинаем cleanup для {user_id}")
         await cleanup_peer(room_code, user_id)
 
 
@@ -199,6 +207,8 @@ async def handle_webrtc_signal(room_code: str, from_id: str, message: dict):
         logger.warning(f"[WS] ⚠️ {msg_type} без target от {from_id}")
         return
     
+    target_ws = None
+    
     async with rooms_lock:
         room = active_rooms.get(room_code)
         if not room:
@@ -210,16 +220,19 @@ async def handle_webrtc_signal(room_code: str, from_id: str, message: dict):
             logger.warning(f"[WS] ⚠️ Target {target_id} не найден в комнате {room_code}")
             return
         
-        # Добавляем from в сообщение
-        message["from"] = from_id
-        
-        try:
-            await target_peer.websocket.send_json(message)
-            logger.debug(f"[WS] ✅ {msg_type}: {from_id} → {target_id}")
-        except Exception as e:
-            logger.error(f"[WS] ❌ Ошибка отправки {msg_type} к {target_id}: {e}")
-            # Помечаем соединение как мертвое
-            await cleanup_peer(room_code, target_id)
+        target_ws = target_peer.websocket
+    
+    # Отправляем вне lock
+    # Добавляем from в сообщение
+    message["from"] = from_id
+    
+    try:
+        await target_ws.send_json(message)
+        logger.debug(f"[WS] ✅ {msg_type}: {from_id} → {target_id}")
+    except Exception as e:
+        logger.error(f"[WS] ❌ Ошибка отправки {msg_type} к {target_id}: {e}")
+        # Помечаем соединение как мертвое
+        await cleanup_peer(room_code, target_id)
 
 
 async def handle_media_status(room_code: str, from_id: str, message: dict):
@@ -278,9 +291,12 @@ async def broadcast_to_room(
         message: Сообщение для отправки
         exclude: User ID которого исключить из рассылки
     """
+    peers_to_notify = []
+    
     async with rooms_lock:
         room = active_rooms.get(room_code)
         if not room:
+            logger.warning(f"[BROADCAST] ⚠️ Комната {room_code} не найдена")
             return
         
         # Копируем список для итерации вне lock
@@ -289,13 +305,22 @@ async def broadcast_to_room(
             for uid, peer in room.peers.items() 
             if uid != exclude
         ]
+        
+        logger.info(
+            f"[BROADCAST] 📡 Отправка '{message.get('type')}' "
+            f"в комнату {room_code} для {len(peers_to_notify)} участников"
+        )
+    
+    if not peers_to_notify:
+        logger.info(f"[BROADCAST] ℹ️ Нет получателей для сообщения в комнате {room_code}")
+        return
     
     # Отправляем без удержания lock
     disconnected = []
     for user_id, ws in peers_to_notify:
         try:
             # Таймаут на отправку чтобы не зависнуть
-            await asyncio.wait_for(ws.send_json(message), timeout=2.0)
+            await asyncio.wait_for(ws.send_json(message), timeout=5.0)
             logger.debug(f"[BROADCAST] ✅ → {user_id}")
         except asyncio.TimeoutError:
             logger.error(f"[BROADCAST] ⏱️ Timeout отправки к {user_id}")
@@ -317,33 +342,44 @@ async def cleanup_peer(room_code: str, user_id: str):
         room_code: Код комнаты
         user_id: ID участника для удаления
     """
+    peer_existed = False
+    ws_to_close = None
+    
     async with rooms_lock:
         room = active_rooms.get(room_code)
         if not room:
+            logger.warning(f"[CLEANUP] ⚠️ Комната {room_code} не найдена")
             return
         
         # Удаляем peer
         peer = room.peers.pop(user_id, None)
         if peer:
-            logger.info(f"[WS] 🗑️ Удален {user_id} из комнаты '{room_code}'")
-            
-            # Закрываем WebSocket если еще открыт
-            try:
-                await peer.websocket.close()
-            except Exception:
-                pass
+            peer_existed = True
+            ws_to_close = peer.websocket
+            logger.info(
+                f"[CLEANUP] 🗑️ Удален {user_id} из комнаты '{room_code}'. "
+                f"Осталось участников: {len(room.peers)}"
+            )
         
         # Удаляем пустую комнату
         if len(room.peers) == 0:
             del active_rooms[room_code]
-            logger.info(f"[WS] 🏚️ Комната '{room_code}' удалена (пустая)")
-            return
+            logger.info(f"[CLEANUP] 🏚️ Комната '{room_code}' удалена (пустая)")
     
-    # Уведомляем остальных участников
-    await broadcast_to_room(room_code, {
-        "type": "peer_left",
-        "peer_id": user_id
-    })
+    # Закрываем WebSocket вне lock
+    if ws_to_close:
+        try:
+            await ws_to_close.close()
+        except Exception as e:
+            logger.debug(f"[CLEANUP] WebSocket уже закрыт для {user_id}: {e}")
+    
+    # Уведомляем остальных участников только если peer существовал
+    if peer_existed:
+        logger.info(f"[CLEANUP] 📣 Уведомляем комнату об уходе {user_id}")
+        await broadcast_to_room(room_code, {
+            "type": "peer_left",
+            "peer_id": user_id
+        })
 
 
 # === ФОНОВАЯ ЗАДАЧА: ОЧИСТКА МЕРТВЫХ СОЕДИНЕНИЙ ===
@@ -359,6 +395,8 @@ async def cleanup_stale_connections():
             now = datetime.utcnow()
             stale_threshold = 120  # 2 минуты без активности
             
+            stale_peers_by_room = {}
+            
             async with rooms_lock:
                 for room_code, room in list(active_rooms.items()):
                     stale_peers = [
@@ -366,12 +404,46 @@ async def cleanup_stale_connections():
                         if (now - peer.last_ping).total_seconds() > stale_threshold
                     ]
                     
-                    for uid in stale_peers:
-                        logger.warning(f"[CLEANUP] ⚠️ Удаляю зависший peer: {uid}")
+                    if stale_peers:
+                        stale_peers_by_room[room_code] = stale_peers
+                        logger.warning(
+                            f"[CLEANUP] ⚠️ Найдено {len(stale_peers)} зависших peers "
+                            f"в комнате {room_code}: {stale_peers}"
+                        )
             
             # Cleanup вне lock
-            for uid in stale_peers:
-                await cleanup_peer(room_code, uid)
+            for room_code, stale_peers in stale_peers_by_room.items():
+                for uid in stale_peers:
+                    logger.warning(f"[CLEANUP] 🧹 Удаляю зависший peer: {uid}")
+                    await cleanup_peer(room_code, uid)
         
         except Exception as e:
             logger.error(f"[CLEANUP] ❌ Ошибка очистки: {e}", exc_info=True)
+
+
+# === UTILITY: Получить информацию о комнате (для отладки) ===
+@router.get("/rooms/{room_code}/info")
+async def get_room_info(room_code: str):
+    """Получить информацию о комнате для отладки"""
+    async with rooms_lock:
+        room = active_rooms.get(room_code)
+        if not room:
+            return {"error": "Room not found", "room_code": room_code}
+        
+        return {
+            "room_code": room_code,
+            "created_at": room.created_at.isoformat(),
+            "peer_count": len(room.peers),
+            "peers": [
+                {
+                    "id": peer.user_id,
+                    "audio_on": peer.audio_on,
+                    "video_on": peer.video_on,
+                    "screen_sharing": peer.screen_sharing,
+                    "connected_at": peer.connected_at.isoformat(),
+                    "last_ping": peer.last_ping.isoformat(),
+                    "active_rtc_connections": list(peer.active_rtc_connections)
+                }
+                for peer in room.peers.values()
+            ]
+        }
