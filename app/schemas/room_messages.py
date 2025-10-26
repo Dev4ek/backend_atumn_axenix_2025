@@ -59,7 +59,7 @@ class PollingResponse(BaseModel):
 
 class RoomMessageGetNew(BaseModel):
     last_message_id: int 
-    timeout: int = Field(30, ge=5, le=60, description="Таймаут ожидания (секунды)"),
+    timeout: int = Field(30, ge=1, le=60, description="Таймаут ожидания (секунды)"),
     public_key_user: str = Field(..., description="Публичный ключ пользователя для шифрования")
 
 class RoomMessageGetAll(BaseModel):
