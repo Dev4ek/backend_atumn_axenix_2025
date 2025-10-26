@@ -63,6 +63,4 @@ class RoomMessageGetNew(BaseModel):
     public_key_user: str = Field(..., description="Публичный ключ пользователя для шифрования")
 
 class RoomMessageGetAll(BaseModel):
-    limit: int = Field(100, ge=1, le=1000),
-    offset: int = Field(0, ge=0),
     public_key_user: str = Field(..., description="Публичный ключ пользователя для шифрования"),

@@ -408,8 +408,7 @@ async def get_room_messages(
         select(RoomMessages)
         .where(RoomMessages.room_id == room_user.room_id)
         .order_by(desc(RoomMessages.send_at))
-        .limit(RoomMessage.limit)
-        .offset(RoomMessage.offset)
+
     )
     
     messages = result.scalars().all()
