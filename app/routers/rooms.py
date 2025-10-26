@@ -301,7 +301,7 @@ async def poll_messages(
 
 
 @router.post(
-    "/{room_code}/messages",
+    "/{room_code}/messages/send",
     response_model=RoomMessageResponse,
     description="Отправка сообщения в комнату"
 )
