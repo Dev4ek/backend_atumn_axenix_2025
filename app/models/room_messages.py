@@ -22,8 +22,8 @@ class RoomMessages(Base):
         ForeignKey("rooms.id"),
         comment="Айди комнаты",
     )
-    text: Mapped[str] = mapped_column(Text, comment="Текст сообщения")
-    original_text: Mapped[str] = mapped_column(Text, comment="Оригинальный текст (до фильтрации)")
+    text: Mapped[str] = mapped_column(String(115), comment="Текст сообщения")
+    original_text: Mapped[str] = mapped_column(String(115), comment="Оригинальный текст (до фильтрации)")
     
     message_type: Mapped[str] = mapped_column(
         String(50), default="text", comment="Тип сообщения: text, system, notification"

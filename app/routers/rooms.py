@@ -12,7 +12,7 @@ from app.models.room import Room
 from app.models.room_users import RoomUsers
 from app.models.room_messages import RoomMessages
 from app.schemas.room import RoomCreate, RoomJoinResponse, RoomResponse, RoomJoin, RoomWithUsersResponse, RoomUpdate, RoomWithBannedWordsResponse
-from app.schemas.room_messages import RoomMessageCreate, RoomMessageResponse, PollingResponse
+from app.schemas.room_messages import RoomMessageCreate, RoomMessageResponse, PollingResponse, RoomMessageGetNew, RoomMessageGetAll 
 from app.services.message_filter import message_filter
 from app.services.notification_service import notification_service
 import shortuuid
@@ -218,7 +218,7 @@ async def delete_room(
 
 # ===== НОВЫЕ ЭНДПОИНТЫ ДЛЯ СООБЩЕНИЙ =====
 
-@router.get(
+@router.post(
     "/{room_code}/poll",
     response_model=PollingResponse,
     description="Long-polling для получения новых сообщений и уведомлений"
@@ -226,8 +226,7 @@ async def delete_room(
 async def poll_messages(
     room_code: str,
     request: Request,
-    last_message_id: int = Query(0, description="ID последнего полученного сообщения"),
-    timeout: int = Query(30, ge=5, le=60, description="Таймаут ожидания (секунды)"),
+    roommessage: RoomMessageGetNew,
     db: AsyncSession = Depends(get_db)
 ):
     # Проверяем доступ к комнате
@@ -252,13 +251,13 @@ async def poll_messages(
     notification_service.subscribe_user(room_id, token_room)
 
     # Проверяем наличие новых данных с интервалами
-    while (datetime.utcnow() - start_time).seconds < timeout:
+    while (datetime.utcnow() - start_time).seconds < roommessage.timeout:
         # Получаем новые сообщения
         result = await db.execute(
             select(RoomMessages)
             .where(
                 RoomMessages.room_id == room_id,
-                RoomMessages.id > last_message_id
+                RoomMessages.id > roommessage.last_message_id
             )
             .order_by(RoomMessages.id.asc())
         )
@@ -277,12 +276,14 @@ async def poll_messages(
                 .where(RoomUsers.room_id == room_id)
             )
             user_count = user_count_result.scalar() or 0
-
+            for msg in new_messages:
+                msg.public_key_user = roommessage.public_key_user
+                MessageResponse=[RoomMessageResponse.from_orm(msg) ]
             return PollingResponse(
-                messages=[RoomMessageResponse.from_orm(msg) for msg in new_messages],
+                messages=MessageResponse,
                 notifications=notifications,
                 user_count=user_count,
-                last_message_id=new_messages[-1].id if new_messages else last_message_id,
+                last_message_id=new_messages[-1].id if new_messages else roommessage.last_message_id,
                 has_more=False
             )
 
@@ -294,7 +295,7 @@ async def poll_messages(
         messages=[],
         notifications=[],
         user_count=0,
-        last_message_id=last_message_id,
+        last_message_id=roommessage.last_message_id,
         has_more=False
     )
 
@@ -372,11 +373,11 @@ async def create_message(
             "reason": filter_result["filtered_reason"],
             "timestamp": datetime.utcnow().isoformat()
         })
-
+    message.public_key_user = message_data.public_key_user
     return RoomMessageResponse.from_orm(message)
 
 
-@router.get(
+@router.post(
     "/{room_code}/messages",
     response_model=list[RoomMessageResponse],
     description="Получение истории сообщений комнаты"
@@ -384,8 +385,7 @@ async def create_message(
 async def get_room_messages(
     room_code: str,
     request: Request,
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    RoomMessage:RoomMessageGetAll,
     db: AsyncSession = Depends(get_db)
 ):
     # Проверяем доступ к комнате
@@ -408,12 +408,16 @@ async def get_room_messages(
         select(RoomMessages)
         .where(RoomMessages.room_id == room_user.room_id)
         .order_by(desc(RoomMessages.send_at))
-        .limit(limit)
-        .offset(offset)
+        .limit(RoomMessage.limit)
+        .offset(RoomMessage.offset)
     )
     
     messages = result.scalars().all()
-    return messages
+    msgg = []
+    for msg in messages:
+        msg.public_key_user = RoomMessage.public_key_user
+        msgg.append(RoomMessageResponse.from_orm(msg))
+    return msgg
 
 
 @router.put(

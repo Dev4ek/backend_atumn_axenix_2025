@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 import html
 import re
+from app.utils.auth import rs
 
 
 class RoomMessageBase(BaseModel):
@@ -10,21 +11,31 @@ class RoomMessageBase(BaseModel):
     message_type: str = Field(default="text")
 
 
-class RoomMessageCreate(RoomMessageBase):
+class RoomMessageCreate(BaseModel):
+    public_key_user: str
+    text: str = Field(..., min_length=1, max_length=2000)
+    message_type: str = Field(default="text")
+    
     @validator('text')
-    def validate_text(cls, v):
-        # Базовая очистка от HTML
-        v = html.escape(v)
-        
-        # Проверка на повторяющиеся символы
-        if re.match(r'^(.)\1{15,}$', v):
-            raise ValueError('Сообщение содержит подозрительные паттерны')
-            
+    def encrypt_text(cls, v, values):
+        if 'public_key_user' in values:
+
+            encrypted_text = rs.sync_decode(public_key_user=values['public_key_user'], encrypted_message=v)
+            return encrypted_text
         return v
 
-
-class RoomMessageResponse(RoomMessageBase):
+class RoomMessageResponse(BaseModel):
     id: int
+    public_key_user: str
+    text: str
+    @validator('text')
+    def encrypt_text(cls, v, values):
+        print(values)
+        if 'public_key_user' in values:
+            text = rs.sync_encode(public_key_user=values['public_key_user'], message=v)
+            return text
+        return v
+
     user_nickname: str
     room_id: int
     message_type: str
@@ -42,3 +53,16 @@ class PollingResponse(BaseModel):
     user_count: int = 0
     last_message_id: Optional[int] = None
     has_more: bool = False
+
+
+
+
+class RoomMessageGetNew(BaseModel):
+    last_message_id: int 
+    timeout: int = Field(30, ge=5, le=60, description="Таймаут ожидания (секунды)"),
+    public_key_user: str = Field(..., description="Публичный ключ пользователя для шифрования")
+
+class RoomMessageGetAll(BaseModel):
+    limit: int = Field(100, ge=1, le=1000),
+    offset: int = Field(0, ge=0),
+    public_key_user: str = Field(..., description="Публичный ключ пользователя для шифрования"),
