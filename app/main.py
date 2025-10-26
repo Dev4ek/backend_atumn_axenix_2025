@@ -1,8 +1,20 @@
+import asyncio
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.routers import router
+from contextlib import asynccontextmanager
+
+from app.routers.websocket import cleanup_stale_connections
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    cleanup_task = asyncio.create_task(cleanup_stale_connections())
+    yield
+    # Shutdown
+    cleanup_task.cancel()
 
 # Создание приложения
 app = FastAPI(
@@ -10,6 +22,7 @@ app = FastAPI(
     description="API для веб-приложения онлайн-конференций",
     version="1.0.0",
     docs_url="/docs",
+    lifespan=lifespan
 )
 
 # CORS middleware
