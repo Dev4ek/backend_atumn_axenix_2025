@@ -37,19 +37,17 @@ async def room_websocket(
         logger.info(f"[WS] Отправляю active_peers к {user_id}: {len(active_users)} участников")
         await websocket.send_json({
             "type": "active_peers",
-            "peers": active_users
+            "peers": active_users,
+            "should_create_offer": True  
         })
-        
-        # 2. Задержка для избежания race condition
-        await asyncio.sleep(0.1)
         
         # 3. Уведомляем других о новом участнике
         logger.info(f"[WS] Уведомляю остальных о {user_id}")
         await broadcast(room_code, {
             "type": "peer_joined",
-            "peer_token": user_id
+            "peer_token": user_id,
+            "should_create_offer": False 
         }, exclude=user_id)
-        
         logger.info(f"[WS] ✅ Инициализация завершена для {user_id}")
         logger.info(f"[WS] Всего в комнате '{room_code}': {len(active_connections[room_code])}")
         
