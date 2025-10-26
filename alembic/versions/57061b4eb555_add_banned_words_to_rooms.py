@@ -1,8 +1,8 @@
-"""init tables
+"""Add banned_words to rooms
 
-Revision ID: 84d14c954e2a
+Revision ID: 57061b4eb555
 Revises: 
-Create Date: 2025-10-25 21:01:38.407079
+Create Date: 2025-10-26 03:41:43.920654
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '84d14c954e2a'
+revision: str = '57061b4eb555'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,6 +24,7 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('nickname', sa.String(length=255), nullable=False),
+    sa.Column('avatar', sa.String(length=1000), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
@@ -45,8 +46,8 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_nickname', sa.String(length=255), nullable=False, comment='Имя пользователя'),
     sa.Column('room_id', sa.Integer(), nullable=False, comment='Айди комнаты'),
-    sa.Column('text', sa.Text(), nullable=False, comment='Текст сообщения'),
-    sa.Column('original_text', sa.Text(), nullable=False, comment='Оригинальный текст (до фильтрации)'),
+    sa.Column('text', sa.String(length=115), nullable=False, comment='Текст сообщения'),
+    sa.Column('original_text', sa.String(length=115), nullable=False, comment='Оригинальный текст (до фильтрации)'),
     sa.Column('message_type', sa.String(length=50), nullable=False, comment='Тип сообщения: text, system, notification'),
     sa.Column('is_filtered', sa.Boolean(), nullable=False, comment='Было ли сообщение отфильтровано'),
     sa.Column('filtered_reason', sa.String(length=500), nullable=True, comment='Причина фильтрации'),
